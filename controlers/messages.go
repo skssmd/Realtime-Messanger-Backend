@@ -344,11 +344,6 @@ func CreateMessage(c *gin.Context) {
 			Name:      header.Filename, // Save the original file name
 		}
 		attachments = append(attachments, attachment)
-
-		// If an audio file is detected, set the message type to "audio"
-		if fileType == "audio" {
-			messageType = "audio"
-		}
 	}
 
 	// Save attachments to database
@@ -358,7 +353,7 @@ func CreateMessage(c *gin.Context) {
 			return
 		}
 		// Update message type if it contains files
-		initials.DB.Model(&message).Update("MessageType", messageType)
+		initials.DB.Model(&message).Update("MessageType", "file")
 	}
 
 	go sockets.BroadcastMessage(message.ID)
@@ -371,18 +366,13 @@ func CreateMessage(c *gin.Context) {
 	})
 }
 
-// detectFileType determines whether the file is an image, audio, general file, or an executable
+// detectFileType determines whether the file is an image, general file, or an executable
 func detectFileType(fileHeader *multipart.FileHeader) (string, error) {
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 
 	// Define allowed image extensions
 	imageExtensions := map[string]bool{
 		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".bmp": true, ".webp": true,
-	}
-
-	// Define allowed audio extensions
-	audioExtensions := map[string]bool{
-		".mp3": true, ".wav": true, ".flac": true, ".aac": true, ".ogg": true, ".m4a": true, ".webm": true,
 	}
 
 	// Define executable file extensions (block these)
@@ -398,11 +388,6 @@ func detectFileType(fileHeader *multipart.FileHeader) (string, error) {
 	// Identify images
 	if imageExtensions[ext] {
 		return "image", nil
-	}
-
-	// Identify audio files
-	if audioExtensions[ext] {
-		return "audio", nil
 	}
 
 	return "file", nil // Other file types (e.g., PDF, DOCX) are allowed
